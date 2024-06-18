@@ -41,6 +41,9 @@ RUN echo "==> Install requests.." \
 WORKDIR /app
 
 COPY ios_xe_kai8.py /app/
+COPY ios_xe_buddy_job.py /app/
+COPY ios_xe_buddy_script.py /app/
+COPY testbed.yaml /app/
 COPY /scripts /scripts/
 
 RUN echo "==> Convert script..." \

@@ -1,13 +1,12 @@
 import os
 import json
 import requests
-import subprocess
 import streamlit as st
 from langchain_community.llms import Ollama
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 from langchain_community.vectorstores import Chroma
-from langchain_community.document_loaders import JSONLoader
+from langchain_community.document_loaders import JSONLoader, TextLoader
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_community.embeddings import HuggingFaceInstructEmbeddings
 
@@ -40,12 +39,13 @@ def load_model():
             st.error(f"An error occurred while loading the model on CPU: {e}")
             return None
 
-class ChatWithPCAP:
-    def __init__(self, json_path):
-        self.json_path = json_path
+class ChatWithIOSXE:
+    def __init__(self, file_path, file_type):
+        self.file_path = file_path
+        self.file_type = file_type
         self.embedding_model = load_model()
         self.vectordb = None
-        self.load_json()
+        self.load_data()
         self.store_in_chroma(self.pages)
 
         self.memory = ConversationBufferMemory(
@@ -57,12 +57,15 @@ class ChatWithPCAP:
 
         self.conversation_history = []
 
-    def load_json(self):
-        self.loader = JSONLoader(
-            file_path=self.json_path,
-            jq_schema=".[] | ._source.layers",
-            text_content=False
-        )
+    def load_data(self):
+        if self.file_type == 'json':
+            self.loader = JSONLoader(
+                file_path=self.file_path,
+                jq_schema=".info[]",
+                text_content=False
+            )
+        elif self.file_type == 'txt':
+            self.loader = TextLoader(file_path=self.file_path)
         self.pages = self.loader.load_and_split()
 
     def split_into_chunks(self, pages):
@@ -176,46 +179,22 @@ class ChatWithPCAP:
         for result in all_results:
             self.conversation_history.append(AIMessage(content=f"Model: {result['model']} - {result['answer']}"))
 
-# Function to convert pcap to JSON
-def pcap_to_json(pcap_path, json_path):
-    command = f'tshark -nlr {pcap_path} -T json > {json_path}'
-    subprocess.run(command, shell=True)
-
-# Streamlit UI for uploading and converting pcap file
-def upload_and_convert_pcap():
-    st.title('Packet KAI8 - Chat with Packet Captures using Multi-AI Consensus')
-    uploaded_file = st.file_uploader("Choose a PCAP file", type="pcap")
-    if uploaded_file:
-        if not os.path.exists('temp'):
-            os.makedirs('temp')
-        pcap_path = os.path.join("temp", uploaded_file.name)
-        json_path = pcap_path + ".json"
-        with open(pcap_path, "wb") as f:
-            f.write(uploaded_file.getvalue())
-        pcap_to_json(pcap_path, json_path)
-        st.session_state['json_path'] = json_path
-        st.success("PCAP file uploaded and converted to JSON.")
-        # Fetch and display the models in a select box
-        models = get_ollama_models("http://ollama:11434/")  # Make sure to use the correct base URL
-        if models:
-            selected_model = st.selectbox("Select Model", models)
-            st.session_state['selected_model'] = selected_model
-            
-            if st.button("Proceed to Chat"):
-                st.session_state['page'] = 2        
-
 # Streamlit UI for chat interface
 def chat_interface():
-    st.title('Packet KAI8 - Chat with Packet Captures using Multi-AI Consensus')
-    json_path = st.session_state.get('json_path')
-    if not json_path or not os.path.exists(json_path):
-        st.error("PCAP file missing or not converted. Please go back and upload a PCAP file.")
+    st.title('IOS XE KAI8 - Chat with Show Commands using Multi-AI Consensus')
+    json_path = 'Command_Output.json'
+    txt_path = 'Command_Output.txt'
+    if not os.path.exists(json_path) and not os.path.exists(txt_path):
+        st.error("Show Command Output Missing. Try another command.")
         return
 
-    if 'chat_instance' not in st.session_state:
-        st.session_state['chat_instance'] = ChatWithPCAP(json_path=json_path)
+    file_type = 'json' if os.path.exists(json_path) else 'txt'
+    file_path = json_path if file_type == 'json' else txt_path
 
-    user_input = st.text_input("Ask a question about the PCAP data:")
+    if 'chat_instance' not in st.session_state:
+        st.session_state['chat_instance'] = ChatWithIOSXE(file_path=file_path, file_type=file_type)
+
+    user_input = st.text_input("Ask a question about the Show Command:")
     if user_input and st.button("Send"):
         with st.spinner('Thinking...'):
             response = st.session_state['chat_instance'].chat(user_input)
@@ -225,11 +204,64 @@ def chat_interface():
             else:
                 st.markdown("No specific answer found.")
 
-if __name__ == "__main__":
-    if "page" not in st.session_state:
-        st.session_state["page"] = 1
+def run_pyats_job():
+    os.system("pyats run job ios_xe_buddy_job.py")
 
-    if st.session_state["page"] == 1:
-        upload_and_convert_pcap()
-    elif st.session_state["page"] == 2:
-        chat_interface()
+def page_pyats_job():
+    show_command = st.text_input('Please Enter a Show Command', '')
+    with open('command.txt', 'w') as f:
+        f.write(show_command)
+
+    if st.button("Run pyATS Job"):
+        run_pyats_job()
+        st.session_state['pyats_job_run'] = True
+        st.success("pyATS Job Completed Successfully!")
+
+    models = get_ollama_models("http://ollama:11434/")
+    if models:
+        selected_model = st.selectbox("Select Model", models)
+        st.session_state['selected_model'] = selected_model
+    else:
+        st.markdown('No models available. Please visit [localhost:3002](http://localhost:3002) to download models.')
+
+    if st.session_state.get('selected_model'):
+        if st.button("Proceed to Chat"):
+            st.session_state['page'] = 'chat'
+
+def get_ollama_models(base_url):
+    try:
+        response = requests.get(f"{base_url}api/tags")
+        response.raise_for_status()
+        models_data = response.json()
+        models = [model['name'] for model in models_data.get('models', [])]
+        return models
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to get models from Ollama: {e}")
+        return []
+
+def page_chat():
+    user_input = st.text_input("Ask a question about the show command output:", key="user_input")
+    if st.button("Ask"):
+        chat_instance = ChatWithIOSXE(file_path=st.session_state['json_path'], file_type='json')
+        ai_response = chat_instance.chat(user_input)
+        st.session_state['conversation_history'] += f"\nUser: {user_input}\nAI: {ai_response}"
+        st.text_area("Conversation History:", value=st.session_state['conversation_history'], height=300, key="conversation_history_display")
+
+    if st.button("Run A New Show Command"):
+        st.session_state['conversation_history'] = ""
+        st.session_state['page'] = 'pyats_job'
+        st.rerun()
+
+st.title("IOS XE KAI8")
+
+if 'page' not in st.session_state:
+    st.session_state['page'] = 'pyats_job'
+if 'conversation_history' not in st.session_state:
+    st.session_state['conversation_history'] = ""
+if 'pyats_job_run' not in st.session_state:
+    st.session_state['pyats_job_run'] = False
+
+if st.session_state['page'] == 'pyats_job':
+    page_pyats_job()
+elif st.session_state['page'] == 'chat':
+    chat_interface()
