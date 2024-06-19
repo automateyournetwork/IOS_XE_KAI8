@@ -263,16 +263,15 @@ def page_chat():
         st.session_state.page = 2
         st.rerun()
 
-if 'page' not in st.session_state:
-    st.session_state['page'] = 'pyats_job'
-if 'conversation_history' not in st.session_state:
-    st.session_state['conversation_history'] = ""
-if 'pyats_job_run' not in st.session_state:
-    st.session_state['pyats_job_run'] = False
-
+if __name__ == "__main__":
+    if 'page' not in st.session_state:
+        st.session_state['page'] = 'pyats_job'
+    
+    if 'pyats_job_run' not in st.session_state:
+        st.session_state['pyats_job_run'] = False
+    
     if 'selected_models' not in st.session_state:
         st.session_state.selected_models = {model: False for model in ["gemma", "aya", "llama3", "mistral", "wizardlm2", "qwen2", "phi3", "tinyllama", "openchat"]}
-
     if st.session_state.page == 1:
         model_selection()
     elif st.session_state.page == 2:
