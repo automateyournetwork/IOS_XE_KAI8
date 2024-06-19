@@ -204,6 +204,36 @@ def chat_interface():
             else:
                 st.markdown("No specific answer found.")
 
+def model_selection():
+    st.title("Select Models")
+    all_models = ["gemma", "aya", "llama3", "mistral", "wizardlm2", "qwen2", "phi3", "tinyllama", "openchat"]
+
+    def select_all():
+        for model in all_models:
+            st.session_state.selected_models[model] = True
+
+    def deselect_all():
+        for model in all_models:
+            st.session_state.selected_models[model] = False
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button('Select All Models'):
+            select_all()
+    with col2:
+        if st.button('Deselect All Models'):
+            deselect_all()
+
+    col1, col2, col3 = st.columns(3)
+    for idx, model in enumerate(all_models):
+        col = [col1, col2, col3][idx % 3]
+        with col:
+            st.session_state.selected_models[model] = st.checkbox(model, value=st.session_state.selected_models[model], key=model)
+
+    if st.button('Next'):
+        st.session_state.page = 2
+        st.rerun()
+
 def run_pyats_job():
     os.system("pyats run job ios_xe_buddy_job.py")
 
@@ -217,27 +247,8 @@ def page_pyats_job():
         st.session_state['pyats_job_run'] = True
         st.success("pyATS Job Completed Successfully!")
 
-    models = get_ollama_models("http://ollama:11434/")
-    if models:
-        selected_model = st.selectbox("Select Model", models)
-        st.session_state['selected_model'] = selected_model
-    else:
-        st.markdown('No models available. Please visit [localhost:3002](http://localhost:3002) to download models.')
-
-    if st.session_state.get('selected_model'):
-        if st.button("Proceed to Chat"):
-            st.session_state['page'] = 'chat'
-
-def get_ollama_models(base_url):
-    try:
-        response = requests.get(f"{base_url}api/tags")
-        response.raise_for_status()
-        models_data = response.json()
-        models = [model['name'] for model in models_data.get('models', [])]
-        return models
-    except requests.exceptions.RequestException as e:
-        st.error(f"Failed to get models from Ollama: {e}")
-        return []
+    if st.button("Proceed to Chat"):
+        st.session_state.page = 3
 
 def page_chat():
     user_input = st.text_input("Ask a question about the show command output:", key="user_input")
@@ -249,10 +260,8 @@ def page_chat():
 
     if st.button("Run A New Show Command"):
         st.session_state['conversation_history'] = ""
-        st.session_state['page'] = 'pyats_job'
+        st.session_state.page = 2
         st.rerun()
-
-st.title("IOS XE KAI8")
 
 if 'page' not in st.session_state:
     st.session_state['page'] = 'pyats_job'
@@ -261,7 +270,12 @@ if 'conversation_history' not in st.session_state:
 if 'pyats_job_run' not in st.session_state:
     st.session_state['pyats_job_run'] = False
 
-if st.session_state['page'] == 'pyats_job':
-    page_pyats_job()
-elif st.session_state['page'] == 'chat':
-    chat_interface()
+    if 'selected_models' not in st.session_state:
+        st.session_state.selected_models = {model: False for model in ["gemma", "aya", "llama3", "mistral", "wizardlm2", "qwen2", "phi3", "tinyllama", "openchat"]}
+
+    if st.session_state.page == 1:
+        model_selection()
+    elif st.session_state.page == 2:
+        page_pyats_job()
+    elif st.session_state.page == 3:
+        chat_interface()
