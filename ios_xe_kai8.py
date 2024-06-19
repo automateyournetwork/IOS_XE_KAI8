@@ -82,7 +82,7 @@ class ChatWithIOSXE:
 
     def initialize_llm_chains(self):
         llm_chains = {}
-        models = ["gemma", "aya", "llama3", "mistral", "wizardlm2", "qwen2", "phi3", "tinyllama", "openchat"]
+        selected_models = st.session_state.selected_models
 
         def create_qa_chain(model):
             llm = Ollama(model=model, base_url=f"http://localhost:80/api/{model}/generate")
@@ -93,8 +93,9 @@ class ChatWithIOSXE:
             )
             return qa_chain
 
-        for model in models:
-            llm_chains[model] = create_qa_chain(model)
+        for model in selected_models:
+            if selected_models[model]:
+                llm_chains[model] = create_qa_chain(model)
         return llm_chains
 
     def send_request(self, model, prompt):
@@ -249,6 +250,7 @@ def page_pyats_job():
 
     if st.button("Proceed to Chat"):
         st.session_state.page = 3
+        st.rerun()
 
 def page_chat():
     user_input = st.text_input("Ask a question about the show command output:", key="user_input")
@@ -265,16 +267,17 @@ def page_chat():
 
 if __name__ == "__main__":
     if 'page' not in st.session_state:
-        st.session_state['page'] = 'pyats_job'
+        st.session_state['page'] = 1
     
     if 'pyats_job_run' not in st.session_state:
         st.session_state['pyats_job_run'] = False
     
     if 'selected_models' not in st.session_state:
         st.session_state.selected_models = {model: False for model in ["gemma", "aya", "llama3", "mistral", "wizardlm2", "qwen2", "phi3", "tinyllama", "openchat"]}
-    if st.session_state.page == 1:
+
+    if st.session_state['page'] == 1:
         model_selection()
-    elif st.session_state.page == 2:
+    elif st.session_state['page'] == 2:
         page_pyats_job()
-    elif st.session_state.page == 3:
+    elif st.session_state['page'] == 3:
         chat_interface()
