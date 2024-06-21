@@ -129,7 +129,7 @@ class ChatWithIOSXE:
                 response = qa_chain.invoke(question)
                 if response:
                     answer_text = response['answer'] if isinstance(response, dict) and 'answer' in response else str(response)
-                    response_placeholders[model].write(f"Model: {model}\nResponse: {answer_text}")
+                    response_placeholders[model].markdown(f"**Model: {model}**\n\nResponse: {answer_text}\n\n---")
                     all_results.append(
                         {
                             "model": model,
@@ -156,24 +156,36 @@ class ChatWithIOSXE:
                     }
                 )
 
+        # Initial consensus prompt
         consensus_prompt = (
-            f"I am asking you to try and come to consensus with other LLMs on the answer to this question: "
-            f"{question} Here are the answers from each LLM so far: {all_results}"
+            f"Hello, esteemed models. I am seeking your collective expertise to reach a consensus on the following question: "
+            f"{question}. Below are the individual responses from each model: {all_results}. "
+            "Please review these responses carefully and provide a reasoned summary that attempts to align and synthesize the varied perspectives. "
+            "Consider the strengths and weaknesses of each response, and aim to identify common themes or points of agreement."
+            "Keep the original question in mind and do your best to come up with the best, most agreed upon, answer to that original question."
         )
+
         consensus_responses = []
         for model in self.llm_chains.keys():
             consensus_response = self.send_request(model, consensus_prompt)
             st.write(f"Consensus response from {model}: {consensus_response}")
+            st.markdown("""---""")
             consensus_responses.append(consensus_response)
 
+        # Final consensus prompt
         final_consensus_prompt = (
-            f"I am asking you to try and come to consensus with other LLMs on the answer to this question: "
-            f"{question} Here are the consensus answers from each LLM so far: {consensus_responses}"
+            f"Thank you for your thoughtful responses. Now, I ask you to further refine and come to a final consensus on the answer to this question: "
+            f"{question}. Here are the preliminary consensus answers from each model so far: {consensus_responses}. "
+            "Please critically evaluate these summaries, identify the most compelling arguments, and work towards a unified, well-supported final answer. "
+            "Your final response should integrate the best elements of each perspective and resolve any remaining discrepancies."
+            "Keep the original question in mind and do your best to come up with the best, most agreed upon, answer to that original question."
         )
+
         final_consensus_responses = []
         for model in self.llm_chains.keys():
             final_consensus_response = self.send_request(model, final_consensus_prompt)
             st.write(f"Final consensus response from {model}: {final_consensus_response}")
+            st.markdown("""---""")
             final_consensus_responses.append(final_consensus_response)
 
         self.conversation_history.append(HumanMessage(content=question))
@@ -198,12 +210,7 @@ def chat_interface():
     user_input = st.text_input("Ask a question about the Show Command:")
     if user_input and st.button("Send"):
         with st.spinner('Thinking...'):
-            response = st.session_state['chat_instance'].chat(user_input)
-            st.markdown("**Synthesized Answer:**")
-            if isinstance(response, dict) and 'answer' in response:
-                st.markdown(response['answer'])
-            else:
-                st.markdown("No specific answer found.")
+            st.session_state['chat_instance'].chat(user_input)
 
 def model_selection():
     st.title("Select Models")
