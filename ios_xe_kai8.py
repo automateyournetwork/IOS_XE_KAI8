@@ -214,7 +214,7 @@ def chat_interface():
 
 def model_selection():
     st.title("Select Models")
-    all_models = ["gemma", "aya", "llama3", "mistral", "wizardlm2", "qwen2", "phi3", "tinyllama", "openchat"]
+    all_models = ["gemma2", "aya", "llama3", "mistral", "wizardlm2", "qwen2", "phi3", "tinyllama", "openchat"]
 
     def select_all():
         for model in all_models:
@@ -280,7 +280,7 @@ if __name__ == "__main__":
         st.session_state['pyats_job_run'] = False
     
     if 'selected_models' not in st.session_state:
-        st.session_state.selected_models = {model: False for model in ["gemma", "aya", "llama3", "mistral", "wizardlm2", "qwen2", "phi3", "tinyllama", "openchat"]}
+        st.session_state.selected_models = {model: False for model in ["gemma2", "aya", "llama3", "mistral", "wizardlm2", "qwen2", "phi3", "tinyllama", "openchat"]}
 
     if st.session_state['page'] == 1:
         model_selection()
