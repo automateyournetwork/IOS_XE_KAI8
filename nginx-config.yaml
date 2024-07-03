@@ -44,7 +44,10 @@ data:
       }
       upstream falcon2_server {
         server 127.0.0.1:11444;
-      }             
+      }
+      upstream internlm2_server {
+        server 127.0.0.1:11445;
+      }                   
       upstream ios_xe_kai8 {
         server 127.0.0.1:8501;
       }
@@ -183,7 +186,16 @@ data:
           proxy_connect_timeout 600s;
           proxy_send_timeout 600s;
         }
-        
+        location /api/internlm2/generate {
+          proxy_pass http://internlm2_server/api/generate;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_read_timeout 600s;
+          proxy_connect_timeout 600s;
+          proxy_send_timeout 600s;
+        }         
         location /ios_xe_kai8/ {
           proxy_pass http://ios_xe_kai8/;
           proxy_set_header Host $host;
@@ -315,5 +327,17 @@ data:
           proxy_connect_timeout 600s;
           proxy_send_timeout 600s;
         }            
+      }
+    }
+        location /backend/internlm2/generate {
+          proxy_pass http://internlm2_server/api/generate;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_read_timeout 600s;
+          proxy_connect_timeout 600s;
+          proxy_send_timeout 600s;
+        }                                                   
       }
     }
